@@ -22,6 +22,9 @@ RST=>D1
 #include <PubSubClient.h>
 #include <SPI.h>
 #include <MFRC522.h>  // Library for Mifare RC522 Devices
+#include <ESP8266mDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 
 // Update these with values suitable for your network.
 
@@ -29,7 +32,7 @@ RST=>D1
 #define RST_PIN D1  // RST-PIN für RC522 - RFID - SPI - Modul GPIO15 
 #define SS_PIN  D2 // SDA-PIN für RC522 - RFID - SPI - Modul GPIO2 
 
-#define LED_PIN D3 //green
+#define BUZZER_PIN D3 //buzzer
 #define LED_PIN2 D4 //red
 #define TAGSIZE 12
 #define RELAY_PIN D0
@@ -61,7 +64,7 @@ char button_value[50];
 
 void setup() {
   // Initialize the BUILTIN_LED pin as an output
-  pinMode(LED_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
   pinMode(LED_PIN2, OUTPUT);
   pinMode(RELAY_PIN, OUTPUT);
   Serial.begin(115200);
@@ -69,11 +72,41 @@ void setup() {
   
   mfrc522.PCD_Init(); //Initialize MFRC522 hardware
   delay(250);
+  ArduinoOTA.setPort(8266);
+  ArduinoOTA.setHostname("NightOwl-Lab");
+  ArduinoOTA.setPassword((const char *)"123");
+  
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+      type = "sketch";
+    else // U_SPIFFS
+      type = "filesystem";
+
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+    Serial.println("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+  });
+  ArduinoOTA.begin();
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
   reconnect();
   ShowReaderDetails();
+  digitalWrite(RELAY_PIN, HIGH);
   Serial.println(F("-------------------"));
   Serial.println(F("Everything Ready"));
   Serial.println(F("Waiting PICCs to be scanned"));
@@ -87,6 +120,7 @@ void setup_wifi() {
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -113,21 +147,21 @@ void callback(char* topic, byte* payload, unsigned int length) {
   strncpy(button_value, (char *)payload, length);
 
   if(strcmp(button_value, "true")==0) {
-    digitalWrite(LED_PIN, HIGH);
-    unlock();
+    //digitalWrite(LED_PIN, HIGH);
+    node_unlock();
   }
   else if(strcmp(button_value, "false")==0) {
-    digitalWrite(LED_PIN, LOW);
-    lock();
+    //digitalWrite(LED_PIN, LOW);
+    node_lock();
   }
   // Switch on the LED if an 1 was received as first character
   else if ((char)payload[0] == '1') {
-    digitalWrite(LED_PIN2, HIGH);   // Turn the LED on (Note that LOW is the voltage level
+    // Turn the LED on (Note that LOW is the voltage level
     // but actually the LED is on; this is because
     // it is acive low on the ESP-01)
     unlock();
   } else {
-    digitalWrite(LED_PIN2, LOW);  // Turn the LED off by making the voltage HIGH
+    // Turn the LED off by making the voltage HIGH
     lock();
   }
 
@@ -152,7 +186,22 @@ void reconnect() {
     }
   }
 }
+
+bool ota_flag = true;
+uint16_t time_elapsed = 0;
+
 void loop() {
+  if(ota_flag)
+  {
+    while(time_elapsed < 15000)
+    {
+      ArduinoOTA.handle();
+      time_elapsed = millis();
+      delay(10);
+    }
+    ota_flag = false;
+  }
+  delay(500);
   do {
      if (!client.connected()) {
       reconnect();
@@ -167,19 +216,6 @@ void loop() {
   Serial.println("Publishing: ");
   client.publish(publish_msg, cardID);
   Serial.println(cardID);
-}
-
-void cycleLeds() {
-  digitalWrite(LED_PIN2, LOW);  // Make sure red LED is off
-  digitalWrite(LED_PIN, HIGH);   // Make sure green LED is on
-  delay(200);
-  digitalWrite(LED_PIN2, LOW);  // Make sure red LED is off
-  digitalWrite(LED_PIN, HIGH);   // Make sure green LED is on
-  delay(200);
-  digitalWrite(LED_PIN2, LOW);  // Make sure red LED is off
-  digitalWrite(LED_PIN, HIGH);   // Make sure green LED is on
-  delay(200);
-
 }
 
 ///////////////////////////////////////// Get PICC's UID ///////////////////////////////////
@@ -231,21 +267,52 @@ void ShowReaderDetails() {
 }
 
 void unlock() {
-  digitalWrite(LED_PIN, HIGH);
-  delay(500);
-  digitalWrite(LED_PIN2, LOW);
   digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(200);
+//  digitalWrite(LED_PIN2, LOW);
   Serial.println("Unlock");
   delay(5000);
   lock();
 }
 
 void lock() {
-  digitalWrite(LED_PIN, LOW);
-  digitalWrite(LED_PIN2, HIGH);
   while (!client.connected()) {
     reconnect();
   }
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(200);
+  digitalWrite(BUZZER_PIN, LOW);
+  delay(200);
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(200);
+  digitalWrite(BUZZER_PIN, LOW);
+  delay(200);
   digitalWrite(RELAY_PIN, HIGH);
   Serial.println("Lock");
 }
+
+void node_lock() {
+  while (!client.connected()) {
+    reconnect();
+  }
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(200);
+  digitalWrite(BUZZER_PIN, LOW);
+  delay(200);
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(200);
+  digitalWrite(BUZZER_PIN, LOW);
+  delay(200);
+  digitalWrite(RELAY_PIN, HIGH);
+  Serial.println("Lock");
+}
+
+void node_unlock() {
+  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(BUZZER_PIN, HIGH);
+//  digitalWrite(LED_PIN2, LOW);
+  Serial.println("Unlock");
+}
+
+

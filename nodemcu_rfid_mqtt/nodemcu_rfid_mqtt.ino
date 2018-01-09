@@ -44,12 +44,12 @@ char temp[3];
 char cardID[9];
 
 
-const char* ssid = "NIGHTOWL";
-const char* password = "VSGgx8c3VU";
-const char* mqtt_server = "10.99.226.196";
-const char* mqtt_username = "openhabian";
-const char* mqtt_password = "5dc2deb5fe";
-const char* mqtt_id = "loreto";
+const char* ssid = "SC_NIGHTOWL_LAB";
+const char* password = "a78ae1be68";
+const char* mqtt_server = "10.7.1.1";
+const char* mqtt_username = "smart_classroom";
+const char* mqtt_password = "FF4BpcMHZVb9dCBVTRBq";
+const char* mqtt_id = "rfid_door";
 const char* publish_msg = "smartclassroom/event/cardread";
 const char* subscribe_lock = "smartclassroom/event/doorlock/lock";
 const char* subscribe_unlock = "smartclassroom/event/doorlock/unlock";

@@ -35,7 +35,7 @@ RST=>D1
 #define BUZZER_PIN D3 //buzzer
 #define LED_PIN2 D4 //red
 #define TAGSIZE 12
-#define RELAY_PIN D0
+#define RELAY_PIN 10
 
 uint8_t successRead; //variable integer to keep if we hace successful read
 
@@ -49,10 +49,10 @@ const char* password = "a78ae1be68";
 const char* mqtt_server = "10.7.1.1";
 const char* mqtt_username = "smart_classroom";
 const char* mqtt_password = "FF4BpcMHZVb9dCBVTRBq";
-const char* mqtt_id = "rfid_door";
-const char* publish_msg = "smartclassroom/event/cardread";
-const char* subscribe_lock = "smartclassroom/event/doorlock/lock";
-const char* subscribe_unlock = "smartclassroom/event/doorlock/unlock";
+const char* mqtt_id = "MaroonAVR_door";
+const char* publish_msg = "smartclassroom/event/cardread2";
+const char* subscribe_lock = "smartclassroom/event/doorlock/lock2";
+const char* subscribe_unlock = "smartclassroom/event/doorlock/unlock2";
 uint8_t tags;
 
 WiFiClient espClient;

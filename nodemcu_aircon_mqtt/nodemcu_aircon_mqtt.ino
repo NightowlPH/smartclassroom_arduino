@@ -32,7 +32,7 @@ const char* password = "a78ae1be68";
 const char* mqtt_server = "10.7.1.1";
 const char* mqtt_username = "smart_classroom";
 const char* mqtt_password = "FF4BpcMHZVb9dCBVTRBq";
-const char* mqtt_id = "MaroonAVR_door";
+const char* mqtt_id = "Nightowl_aircon";
 
 const char* subscribe_aircon_on = "smartclassroom/event/aircon/on";
 
@@ -50,7 +50,7 @@ void setup() {
   
   delay(250);
   ArduinoOTA.setPort(8266);
-  ArduinoOTA.setHostname("NightOwl-Lab");
+  ArduinoOTA.setHostname("Nightowl_aircon");
   ArduinoOTA.setPassword((const char *)"123");
   
   ArduinoOTA.onStart([]() {

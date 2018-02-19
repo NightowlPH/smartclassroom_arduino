@@ -52,7 +52,7 @@ void setup() {
 
   ArduinoOTA.setPort(8266);
   ArduinoOTA.setHostname("NightOwl-Lights");
-  ArduinoOTA.setPassword((const char *)"123");
+  ArduinoOTA.setPassword((const char *)"xai0aeQu2g");
   
   ArduinoOTA.onStart([]() {
     String type;
@@ -88,8 +88,9 @@ void setup_wifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+    delay(5000);
+    ESP.restart();
   }
 }
 
@@ -127,20 +128,19 @@ bool ota_flag = true;
 uint16_t time_elapsed = 0;
 
 void loop() {
-  if(ota_flag)
-  {
-    while(time_elapsed < 15000)
-    {
-      ArduinoOTA.handle();
-      time_elapsed = millis();
-      delay(10);
-    }
-    ota_flag = false;
-  }
+  //if(ota_flag)
+  //{
+    //while(time_elapsed < 30000)
+    //{
+  ArduinoOTA.handle();
+      //time_elapsed = millis();
+      //delay(10);
+    //}
+    //ota_flag = false;
+  //}
   delay(500);
-
-    client.loop();
- 
+  client.loop();
+  reconnect();
 }
 
 

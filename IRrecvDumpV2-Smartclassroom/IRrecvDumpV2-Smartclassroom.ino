@@ -35,7 +35,7 @@
 // An IR detector/demodulator is connected to GPIO pin 14
 // e.g. D5 on a NodeMCU board.
 #define RECV_PIN D1
-
+#define LED D3
 // The Serial connection baud rate.
 // i.e. Status message will be sent to the PC at this baud rate.
 // Try to avoid slow speeds like 9600, as you will miss messages and
@@ -148,6 +148,7 @@ void dumpACInfo(decode_results *results) {
 // The section of code run only once at start-up.
 void setup() {
   Serial.begin(BAUD_RATE, SERIAL_8N1, SERIAL_TX_ONLY);
+  pinMode(LED, OUTPUT);
   delay(500);  // Wait a bit for the serial connection to be establised.
 
 #if DECODE_HASH
@@ -188,5 +189,17 @@ void loop() {
     Serial.println(resultToSourceCode(&results));
     Serial.println("");  // Blank line between entries
     yield();  // Feed the WDT (again)
+
+    switch(results.value){
+          case 0xCFB5CCB7: //turn on led
+          digitalWrite(LED, HIGH);
+          }
+
+        switch(results.value){
+          case 0x21255021: //turn off led
+          digitalWrite(LED, LOW);
+          }
+
+        irrecv.resume(); 
   }
 }

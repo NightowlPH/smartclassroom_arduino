@@ -194,12 +194,11 @@ void loop() {
           case 0xCFB5CCB7: //turn on led
           digitalWrite(LED, HIGH);
           }
-
-        switch(results.value){
-          case 0x21255021: //turn off led
-          digitalWrite(LED, LOW);
-          }
-
-        irrecv.resume(); 
+          
+    switch(results.value){
+      case 0x21255021: //turn off led
+      digitalWrite(LED, LOW);
+      }
+      irrecv.resume(); 
   }
 }

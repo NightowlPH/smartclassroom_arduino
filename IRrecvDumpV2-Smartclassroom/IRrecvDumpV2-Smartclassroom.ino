@@ -17,19 +17,9 @@
  * Based on Ken Shirriff's IrsendDemo Version 0.1 July, 2009,
  */
 
-#ifndef UNIT_TEST
-#include <Arduino.h>
-#endif
 #include <IRremoteESP8266.h>
 #include <IRrecv.h>
 #include <IRutils.h>
-#if DECODE_AC
-#include <ir_Daikin.h>
-#include <ir_Fujitsu.h>
-#include <ir_Kelvinator.h>
-#include <ir_Midea.h>
-#include <ir_Toshiba.h>
-#endif  // DECODE_AC
 
 // ==================== start of TUNEABLE PARAMETERS ====================
 // An IR detector/demodulator is connected to GPIO pin 14
@@ -62,13 +52,8 @@
 // So, choosing the best TIMEOUT value for your use particular case is
 // quite nuanced. Good luck and happy hunting.
 // NOTE: Don't exceed MAX_TIMEOUT_MS. Typically 130ms.
-#if DECODE_AC
-#define TIMEOUT 50U  // Some A/C units have gaps in their protocols of ~40ms.
-                     // e.g. Kelvinator
-                     // A value this large may swallow repeats of some protocols
-#else  // DECODE_AC
-#define TIMEOUT 15U  // Suits most messages, while not swallowing many repeats.
-#endif  // DECODE_AC
+
+#define TIMEOUT 10U  // Suits most messages, while not swallowing many repeats.
 // Alternatives:
 // #define TIMEOUT 90U  // Suits messages with big gaps like XMP-1 & some aircon
                         // units, but can accidentally swallow repeated messages
@@ -94,7 +79,7 @@
 // Set lower if you are sure your setup is working, but it doesn't see messages
 // from your device. (e.g. Other IR remotes work.)
 // NOTE: Set this value very high to effectively turn off UNKNOWN detection.
-#define MIN_UNKNOWN_SIZE 12
+#define MIN_UNKNOWN_SIZE 24
 // ==================== end of TUNEABLE PARAMETERS ====================
 
 
@@ -106,41 +91,6 @@ decode_results results;  // Somewhere to store the results
 // Display the human readable state of an A/C message if we can.
 void dumpACInfo(decode_results *results) {
   String description = "";
-#if DECODE_DAIKIN
-  if (results->decode_type == DAIKIN) {
-    IRDaikinESP ac(0);
-    ac.setRaw(results->state);
-    description = ac.toString();
-  }
-#endif  // DECODE_DAIKIN
-#if DECODE_FUJITSU_AC
-  if (results->decode_type == FUJITSU_AC) {
-    IRFujitsuAC ac(0);
-    ac.setRaw(results->state, results->bits / 8);
-    description = ac.toString();
-  }
-#endif  // DECODE_FUJITSU_AC
-#if DECODE_KELVINATOR
-  if (results->decode_type == KELVINATOR) {
-    IRKelvinatorAC ac(0);
-    ac.setRaw(results->state);
-    description = ac.toString();
-  }
-#endif  // DECODE_KELVINATOR
-#if DECODE_TOSHIBA_AC
-  if (results->decode_type == TOSHIBA_AC) {
-    IRToshibaAC ac(0);
-    ac.setRaw(results->state);
-    description = ac.toString();
-  }
-#endif  // DECODE_TOSHIBA_AC
-#if DECODE_MIDEA
-  if (results->decode_type == MIDEA) {
-    IRMideaAC ac(0);
-    ac.setRaw(results->value);  // Midea uses value instead of state.
-    description = ac.toString();
-  }
-#endif  // DECODE_MIDEA
   // If we got a human-readable description of the message, display it.
   if (description != "")  Serial.println("Mesg Desc.: " + description);
 }

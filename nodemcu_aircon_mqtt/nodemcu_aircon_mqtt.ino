@@ -27,12 +27,12 @@ IR send pin: D1
 uint16_t aircon_data_on[73] = {8996, 4454,  648, 1660,  650, 582,  630, 576,  624, 1658,  654, 580,  622, 1660,  650, 1660,  650, 582,  632, 576,  626, 1656,  654, 580,  622, 1662,  650, 584,  628, 578,  624, 582,  630, 576,  626, 582,  622, 584,  626, 580,  622, 586,  626, 580,  622, 584,  628, 580,  622, 584,  628, 578,  624, 582,  630, 576,  624, 582,  630, 1652,  648, 586,  626, 1656,  654, 580,  622, 584,  628, 1654,  656, 578,  626};  // UNKNOWN CFB5CCB7
 uint16_t aircon_data_off[73] = {9006, 4444,  648, 1662,  650, 584,  630, 578,  624, 582,  630, 576,  626, 1656,  654, 1656,  654, 578,  624, 584,  630, 1654,  658, 576,  626, 1656,  654, 580,  622, 586,  628, 578,  624, 584,  628, 578,  626, 582,  628, 578,  624, 582,  620, 586,  626, 580,  622, 586,  626, 580,  622, 584,  628, 578,  624, 582,  630, 578,  624, 1658,  652, 580,  622, 1662,  648, 586,  628, 580,  622, 1660,  652, 582,  630};  // UNKNOWN 21255021
 
-const char* ssid = "SC_NIGHTOWL_LAB";
-const char* password = "a78ae1be68";
-const char* mqtt_server = "10.7.1.1";
-const char* mqtt_username = "smart_classroom";
-const char* mqtt_password = "FF4BpcMHZVb9dCBVTRBq";
-const char* mqtt_id = "Nightowl_aircon";
+const char* ssid = "<wifi name>";
+const char* password = "<wifi_password>";
+const char* mqtt_server = "<mqtt server ip>";
+const char* mqtt_username = "<mqtt server username>";
+const char* mqtt_password = "<mqtt password>";
+const char* mqtt_id = "<unique device mqtt id>";
 
 const char* subscribe_aircon_on = "smartclassroom/event/aircon/on";
 

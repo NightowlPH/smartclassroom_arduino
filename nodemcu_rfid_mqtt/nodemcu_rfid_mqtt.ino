@@ -43,13 +43,12 @@ byte readCard[8]; //Stores scanned ID
 char temp[3];
 char cardID[9];
 
-
-const char* ssid = "SC_NIGHTOWL_LAB";
-const char* password = "a78ae1be68";
-const char* mqtt_server = "10.7.1.1";
-const char* mqtt_username = "smart_classroom";
-const char* mqtt_password = "FF4BpcMHZVb9dCBVTRBq";
-const char* mqtt_id = "MaroonAVR_door";
+const char* ssid = "<wifi name>";
+const char* password = "<wifi_password>";
+const char* mqtt_server = "<mqtt server ip>";
+const char* mqtt_username = "<mqtt server username>";
+const char* mqtt_password = "<mqtt password>";
+const char* mqtt_id = "<unique device mqtt id>";
 const char* publish_msg = "smartclassroom/event/cardread2";
 const char* subscribe_lock = "smartclassroom/event/doorlock/lock2";
 const char* subscribe_unlock = "smartclassroom/event/doorlock/unlock2";

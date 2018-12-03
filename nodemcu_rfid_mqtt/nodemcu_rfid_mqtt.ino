@@ -1,20 +1,20 @@
 /*
-This sketch reads the MFRC522 RFID reader and sends out MQTT messages when cards are scanned. It also subscribes to MQTT messages telling it to open the door lock, which is actuated by a relay switching an electronic door strike.
+  This sketch reads the MFRC522 RFID reader and sends out MQTT messages when cards are scanned. It also subscribes to MQTT messages telling it to open the door lock, which is actuated by a relay switching an electronic door strike.
 
- To install the ESP8266 board, (using Arduino 1.6.4+):
+  To install the ESP8266 board, (using Arduino 1.6.4+):
   - Add the following 3rd party board manager under "File -> Preferences -> Additional Boards Manager URLs":
        http://arduino.esp8266.com/stable/package_esp8266com_index.json
   - Open the "Tools -> Board -> Board Manager" and click install for the ESP8266"
   - Select your ESP8266 in "Tools -> Board"
 
 
-MFRC522 pin connections
-SDA=>D2
-SCK=>D5
-MOSI=>D7
-MISO=>D6
-IRC=>NC
-RST=>D1
+  MFRC522 pin connections
+  SDA=>D2
+  SCK=>D5
+  MOSI=>D7
+  MISO=>D6
+  IRC=>NC
+  RST=>D1
 
 */
 
@@ -33,9 +33,10 @@ RST=>D1
 #define SS_PIN  D2 // SDA-PIN für RC522 - RFID - SPI - Modul GPIO2 
 
 #define BUZZER_PIN D3 //buzzer
-#define LED_PIN2 D4 //red
+#define LED_PIN2 D4 //red 
 #define TAGSIZE 12
 #define RELAY_PIN 10
+#define SWITCH_PIN D8 //Switch
 
 uint8_t successRead; //variable integer to keep if we hace successful read
 
@@ -43,15 +44,17 @@ byte readCard[8]; //Stores scanned ID
 char temp[3];
 char cardID[9];
 
-const char* ssid = "<wifi name>";
-const char* password = "<wifi_password>";
-const char* mqtt_server = "<mqtt server ip>";
-const char* mqtt_username = "<mqtt server username>";
-const char* mqtt_password = "<mqtt password>";
-const char* mqtt_id = "<unique device mqtt id>";
-const char* publish_msg = "smartclassroom/event/cardread2";
-const char* subscribe_lock = "smartclassroom/event/doorlock/lock2";
-const char* subscribe_unlock = "smartclassroom/event/doorlock/unlock2";
+int buttonState = 0;
+
+const char* ssid = "<>";
+const char* password = "<>";
+const char* mqtt_server = "<>";
+const char* mqtt_username = "<>";
+const char* mqtt_password = "<>";
+const char* mqtt_id = "NightOwl-Rev2";
+const char* publish_msg = "smartclassroom/NightOwl/doorlock/cardread";
+const char* subscribe_lock = "smartclassroom/NightOwl/doorlock/open";
+const char* subscribe_unlock = "smartclassroom/NightOwl/doorlock/close";
 uint8_t tags;
 
 WiFiClient espClient;
@@ -66,15 +69,16 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(LED_PIN2, OUTPUT);
   pinMode(RELAY_PIN, OUTPUT);
+  pinMode(SWITCH_PIN, INPUT);
   Serial.begin(115200);
   SPI.begin();
-  
+
   mfrc522.PCD_Init(); //Initialize MFRC522 hardware
   delay(250);
   ArduinoOTA.setPort(8266);
   ArduinoOTA.setHostname("NightOwl-Lab");
   ArduinoOTA.setPassword((const char *)"123");
-  
+
   ArduinoOTA.onStart([]() {
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH)
@@ -145,11 +149,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
   memset(button_value, 0, sizeof(button_value));
   strncpy(button_value, (char *)payload, length);
 
-  if(strcmp(button_value, "true")==0) {
+  if (strcmp(button_value, "true") == 0) {
     //digitalWrite(LED_PIN, HIGH);
     node_unlock();
   }
-  else if(strcmp(button_value, "false")==0) {
+  else if (strcmp(button_value, "false") == 0) {
     //digitalWrite(LED_PIN, LOW);
     node_lock();
   }
@@ -190,9 +194,19 @@ bool ota_flag = true;
 uint16_t time_elapsed = 0;
 
 void loop() {
-  if(ota_flag)
+  buttonState = digitalRead(SWITCH_PIN);
+
+  if (buttonState == HIGH) {
+    digitalWrite(RELAY_PIN, HIGH);
+  }
+  else if (buttonState == LOW) {
+    digitalWrite(RELAY_PIN, LOW);
+    delay(5000);
+    digitalWrite(RELAY_PIN, HIGH);
+  }
+  if (ota_flag)
   {
-    while(time_elapsed < 15000)
+    while (time_elapsed < 15000)
     {
       ArduinoOTA.handle();
       time_elapsed = millis();
@@ -202,13 +216,13 @@ void loop() {
   }
   delay(500);
   do {
-     if (!client.connected()) {
+    if (!client.connected()) {
       reconnect();
     }
     client.loop();
-    
+
     successRead = getID();
-      
+
   }
   while (!successRead);
   Serial.println("");
@@ -230,14 +244,14 @@ uint8_t getID() {
   // I think we should assume every PICC as they have 4 byte UID
   // Until we support 7 byte PICCs
   Serial.println(F("Scanned PICC's UID:"));
-  int j =0;
+  int j = 0;
   for ( uint8_t i = 0; i < mfrc522.uid.size; i++) {  //
     readCard[i] = mfrc522.uid.uidByte[i];
     Serial.print(readCard[i], HEX);
     sprintf(temp, "%02X", readCard[i]);
     cardID[j] = temp[0];
-    cardID[j+1] = temp[1];
-    j=j+2;
+    cardID[j + 1] = temp[1];
+    j = j + 2;
   }
 
   mfrc522.PICC_HaltA(); // Stop reading
@@ -254,7 +268,7 @@ void ShowReaderDetails() {
   else if (v == 0x92)
     Serial.print(F(" = v2.0"));
   else
-  Serial.print(F(" (unknown),probably a chinese clone?"));
+    Serial.print(F(" (unknown),probably a chinese clone?"));
   Serial.println("");
   // When 0x00 or 0xFF is returned, communication probably failed
   if ((v == 0x00) || (v == 0xFF)) {
@@ -269,7 +283,7 @@ void unlock() {
   digitalWrite(RELAY_PIN, LOW);
   digitalWrite(BUZZER_PIN, HIGH);
   delay(200);
-//  digitalWrite(LED_PIN2, LOW);
+  //  digitalWrite(LED_PIN2, LOW);
   Serial.println("Unlock");
   delay(5000);
   lock();
@@ -310,8 +324,9 @@ void node_lock() {
 void node_unlock() {
   digitalWrite(RELAY_PIN, LOW);
   digitalWrite(BUZZER_PIN, HIGH);
-//  digitalWrite(LED_PIN2, LOW);
+  //  digitalWrite(LED_PIN2, LOW);
   Serial.println("Unlock");
 }
+
 
 

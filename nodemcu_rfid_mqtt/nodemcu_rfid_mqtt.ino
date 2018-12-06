@@ -32,11 +32,11 @@
 #define RST_PIN D1  // RST-PIN für RC522 - RFID - SPI - Modul GPIO15 
 #define SS_PIN  D2 // SDA-PIN für RC522 - RFID - SPI - Modul GPIO2 
 
-#define BUZZER_PIN D3 //buzzer
+#define BUZZER_PIN 0 //buzzer
 #define LED_PIN2 D4 //red 
 #define TAGSIZE 12
 #define RELAY_PIN 10
-#define SWITCH_PIN D8 //Switch
+#define SWITCH_PIN 15 //Switch
 
 uint8_t successRead; //variable integer to keep if we hace successful read
 
@@ -44,14 +44,12 @@ byte readCard[8]; //Stores scanned ID
 char temp[3];
 char cardID[9];
 
-int buttonState = 0;
-
 const char* ssid = "<>";
 const char* password = "<>";
 const char* mqtt_server = "<>";
 const char* mqtt_username = "<>";
 const char* mqtt_password = "<>";
-const char* mqtt_id = "NightOwl-Rev2";
+const char* mqtt_id = "NightOwl-Revision-2";
 const char* publish_msg = "smartclassroom/NightOwl/doorlock/cardread";
 const char* subscribe_lock = "smartclassroom/NightOwl/doorlock/open";
 const char* subscribe_unlock = "smartclassroom/NightOwl/doorlock/close";
@@ -69,14 +67,14 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(LED_PIN2, OUTPUT);
   pinMode(RELAY_PIN, OUTPUT);
-  pinMode(SWITCH_PIN, INPUT);
+  pinMode(SWITCH_PIN, INPUT_PULLUP);
   Serial.begin(115200);
   SPI.begin();
 
   mfrc522.PCD_Init(); //Initialize MFRC522 hardware
   delay(250);
   ArduinoOTA.setPort(8266);
-  ArduinoOTA.setHostname("NightOwl-Lab");
+  ArduinoOTA.setHostname("NightOwl-Lab-rev2");
   ArduinoOTA.setPassword((const char *)"123");
 
   ArduinoOTA.onStart([]() {
@@ -194,16 +192,8 @@ bool ota_flag = true;
 uint16_t time_elapsed = 0;
 
 void loop() {
-  buttonState = digitalRead(SWITCH_PIN);
-
-  if (buttonState == HIGH) {
-    digitalWrite(RELAY_PIN, HIGH);
-  }
-  else if (buttonState == LOW) {
-    digitalWrite(RELAY_PIN, LOW);
-    delay(5000);
-    digitalWrite(RELAY_PIN, HIGH);
-  }
+//  int sensorVal = digitalRead(SWITCH_PIN);
+  
   if (ota_flag)
   {
     while (time_elapsed < 15000)
@@ -214,15 +204,24 @@ void loop() {
     }
     ota_flag = false;
   }
-  delay(500);
+  delay(500); 
   do {
+    if (digitalRead(SWITCH_PIN) == HIGH) {
+      Serial.println("Door Unlock");
+      digitalWrite(RELAY_PIN, LOW);  
+      digitalWrite(BUZZER_PIN, HIGH);
+      delay(5000);
+      lock();
+    }
+//    else {
+//      Serial.println("Door Lock");
+//      digitalWrite(RELAY_PIN, HIGH);
+//    }
     if (!client.connected()) {
       reconnect();
     }
     client.loop();
-
     successRead = getID();
-
   }
   while (!successRead);
   Serial.println("");
@@ -327,6 +326,3 @@ void node_unlock() {
   //  digitalWrite(LED_PIN2, LOW);
   Serial.println("Unlock");
 }
-
-
-

@@ -153,7 +153,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   else if (strcmp(button_value, "false") == 0) {
     //digitalWrite(LED_PIN, LOW);
-    node_lock();
+    lock();
   }
   // Switch on the LED if an 1 was received as first character
   else if ((char)payload[0] == '1') {
@@ -289,22 +289,6 @@ void unlock() {
 }
 
 void lock() {
-  while (!client.connected()) {
-    reconnect();
-  }
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(200);
-  digitalWrite(BUZZER_PIN, LOW);
-  delay(200);
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(200);
-  digitalWrite(BUZZER_PIN, LOW);
-  delay(200);
-  digitalWrite(RELAY_PIN, HIGH);
-  Serial.println("Lock");
-}
-
-void node_lock() {
   while (!client.connected()) {
     reconnect();
   }

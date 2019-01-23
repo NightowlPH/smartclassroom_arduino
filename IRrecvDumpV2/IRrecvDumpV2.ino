@@ -80,7 +80,7 @@
                                    // e.g. It will stop decoding a message and
                                    //   start sending it to serial at precisely
                                    //   the time when the next message is likely
-                                   //   to be transmitted, and may miss it.
+                                   //   to be transmitted, and may miss it. 
 
 // Set the smallest sized "UNKNOWN" message packets we actually care about.
 // This value helps reduce the false-positive detection rate of IR background
@@ -147,7 +147,7 @@ void dumpACInfo(decode_results *results) {
 
 // The section of code run only once at start-up.
 void setup() {
-  Serial.begin(BAUD_RATE, SERIAL_8N1, SERIAL_TX_ONLY);
+  Serial.begin(BAUD_RATE, SERIAL_8N1,SERIAL_TX_ONLY);
   delay(500);  // Wait a bit for the serial connection to be establised.
 #if DECODE_AC
   Serial.println("Decoding AC");

@@ -49,10 +49,11 @@ const char* password = "<>";
 const char* mqtt_server = "<>";
 const char* mqtt_username = "<>";
 const char* mqtt_password = "<>";
-const char* mqtt_id = "NightOwl-Revision-2";
-const char* publish_msg = "smartclassroom/NightOwl/doorlock/cardread";
-const char* subscribe_lock = "smartclassroom/NightOwl/doorlock/open";
-const char* subscribe_unlock = "smartclassroom/NightOwl/doorlock/close";
+const char* mqtt_id = "door";
+const char* cardread_topic = "smartclassroom/Door/cardread";
+const char* lock_topic = "smartclassroom/Door/open";
+const char* door_open_topic = "smartclassroom/Door/open";
+const char* door_open_announce_topic = "smartclassroom/Door/announce/open";
 uint8_t tags;
 
 WiFiClient espClient;
@@ -73,8 +74,21 @@ void setup() {
 
   mfrc522.PCD_Init(); //Initialize MFRC522 hardware
   delay(250);
+  set_ota();
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+  reconnect();
+  ShowReaderDetails();
+  digitalWrite(RELAY_PIN, HIGH);
+  Serial.println(F("-------------------"));
+  Serial.println(F("Everything Ready"));
+  Serial.println(F("Waiting PICCs to be scanned"));
+}
+
+void setup_ota() {
   ArduinoOTA.setPort(8266);
-  ArduinoOTA.setHostname("NightOwl-Lab-rev2");
+  ArduinoOTA.setHostname("Door");
   ArduinoOTA.setPassword((const char *)"123");
 
   ArduinoOTA.onStart([]() {
@@ -102,15 +116,6 @@ void setup() {
     else if (error == OTA_END_ERROR) Serial.println("End Failed");
   });
   ArduinoOTA.begin();
-  setup_wifi();
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
-  reconnect();
-  ShowReaderDetails();
-  digitalWrite(RELAY_PIN, HIGH);
-  Serial.println(F("-------------------"));
-  Serial.println(F("Everything Ready"));
-  Serial.println(F("Waiting PICCs to be scanned"));
 }
 
 void setup_wifi() {
@@ -149,23 +154,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   if (strcmp(button_value, "true") == 0) {
     //digitalWrite(LED_PIN, HIGH);
-    node_unlock();
+    unlock(5000);
   }
   else if (strcmp(button_value, "false") == 0) {
     //digitalWrite(LED_PIN, LOW);
     lock();
   }
-  // Switch on the LED if an 1 was received as first character
-  else if ((char)payload[0] == '1') {
-    // Turn the LED on (Note that LOW is the voltage level
-    // but actually the LED is on; this is because
-    // it is acive low on the ESP-01)
-    unlock();
-  } else {
-    // Turn the LED off by making the voltage HIGH
-    lock();
-  }
-
 }
 
 void reconnect() {
@@ -175,9 +169,8 @@ void reconnect() {
     // Attempt to connect
     if (client.connect(mqtt_id, mqtt_username, mqtt_password)) {
       Serial.println("connected");
-      // Once connected, publish an announcement...
-      client.subscribe(subscribe_lock);
-      client.subscribe(subscribe_unlock);
+      client.subscribe(lock_topic);
+      client.subscribe(door_open_topic);
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -208,10 +201,7 @@ void loop() {
   do {
     if (digitalRead(SWITCH_PIN) == HIGH) {
       Serial.println("Door Unlock");
-      digitalWrite(RELAY_PIN, LOW);  
-      digitalWrite(BUZZER_PIN, HIGH);
-      delay(5000);
-      lock();
+      unlock(5000);
     }
 //    else {
 //      Serial.println("Door Lock");
@@ -226,7 +216,7 @@ void loop() {
   while (!successRead);
   Serial.println("");
   Serial.println("Publishing: ");
-  client.publish(publish_msg, cardID);
+  client.publish(cardread_topic, cardID);
   Serial.println(cardID);
 }
 
@@ -278,14 +268,17 @@ void ShowReaderDetails() {
   }
 }
 
-void unlock() {
+void unlock(int unlock_time) {
   digitalWrite(RELAY_PIN, LOW);
   digitalWrite(BUZZER_PIN, HIGH);
+  client.publish(door_open_announce_topic, "true");
   delay(200);
   //  digitalWrite(LED_PIN2, LOW);
   Serial.println("Unlock");
-  delay(5000);
-  lock();
+  if(unlock_time>0){
+    delay(unlock_time);
+    lock();
+  }
 }
 
 void lock() {
@@ -301,12 +294,6 @@ void lock() {
   digitalWrite(BUZZER_PIN, LOW);
   delay(200);
   digitalWrite(RELAY_PIN, HIGH);
+  client.publish(door_open_announce_topic, "false");
   Serial.println("Lock");
-}
-
-void node_unlock() {
-  digitalWrite(RELAY_PIN, LOW);
-  digitalWrite(BUZZER_PIN, HIGH);
-  //  digitalWrite(LED_PIN2, LOW);
-  Serial.println("Unlock");
 }

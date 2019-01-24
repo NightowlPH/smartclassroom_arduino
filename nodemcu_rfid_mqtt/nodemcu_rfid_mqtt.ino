@@ -36,7 +36,7 @@
 #define LED_PIN2 D4 //red 
 #define TAGSIZE 12
 #define RELAY_PIN 10
-#define SWITCH_PIN 15 //Switch
+#define SWITCH_PIN 9 //Switch
 
 uint8_t successRead; //variable integer to keep if we hace successful read
 
@@ -74,13 +74,14 @@ void setup() {
 
   mfrc522.PCD_Init(); //Initialize MFRC522 hardware
   delay(250);
-  set_ota();
+  setup_ota();
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
   reconnect();
   ShowReaderDetails();
   digitalWrite(RELAY_PIN, HIGH);
+  client.publish(door_open_announce_topic, "false");
   Serial.println(F("-------------------"));
   Serial.println(F("Everything Ready"));
   Serial.println(F("Waiting PICCs to be scanned"));
@@ -199,8 +200,10 @@ void loop() {
   }
   delay(500); 
   do {
-    if (digitalRead(SWITCH_PIN) == HIGH) {
+    if (digitalRead(SWITCH_PIN) == LOW) {
       Serial.println("Door Unlock");
+      Serial.println("Publishing door unlock");
+      client.publish(door_open_announce_topic, "true");
       unlock(5000);
     }
 //    else {
@@ -269,15 +272,20 @@ void ShowReaderDetails() {
 }
 
 void unlock(int unlock_time) {
-  digitalWrite(RELAY_PIN, LOW);
-  digitalWrite(BUZZER_PIN, HIGH);
-  client.publish(door_open_announce_topic, "true");
-  delay(200);
-  //  digitalWrite(LED_PIN2, LOW);
-  Serial.println("Unlock");
-  if(unlock_time>0){
-    delay(unlock_time);
-    lock();
+  if(digitalRead(RELAY_PIN) == HIGH){
+    digitalWrite(RELAY_PIN, LOW);
+    digitalWrite(BUZZER_PIN, HIGH);
+    //  digitalWrite(LED_PIN2, LOW);
+    Serial.println("Unlock");
+    if(unlock_time>0){
+     delay(unlock_time);
+     lock();
+     Serial.println("Publishing door lock");
+     client.publish(door_open_announce_topic, "false");
+    }
+  }
+  else{
+    Serial.println("Already unlocked");
   }
 }
 
@@ -285,15 +293,12 @@ void lock() {
   while (!client.connected()) {
     reconnect();
   }
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(200);
-  digitalWrite(BUZZER_PIN, LOW);
-  delay(200);
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(200);
-  digitalWrite(BUZZER_PIN, LOW);
-  delay(200);
-  digitalWrite(RELAY_PIN, HIGH);
-  client.publish(door_open_announce_topic, "false");
-  Serial.println("Lock");
+  if(digitalRead(RELAY_PIN) == LOW){
+    digitalWrite(RELAY_PIN, HIGH);
+    digitalWrite(BUZZER_PIN, LOW);
+    Serial.println("Lock");
+  }
+  else{
+    Serial.println("Already locked");
+  }
 }

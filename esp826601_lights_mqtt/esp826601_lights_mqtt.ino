@@ -32,13 +32,13 @@ RST=>D1
 
 
 
-const char* ssid = "<wifi name>";
-const char* password = "<wifi_password>";
-const char* mqtt_server = "<mqtt server ip>";
-const char* mqtt_username = "<mqtt server username>";
-const char* mqtt_password = "<mqtt password>";
-const char* mqtt_id = "<unique device mqtt id>";
-const char* subscribe_lights = "smartclassroom/event/lights/on";
+const char* ssid = "SC_DORM_401";
+const char* password = "zeupheT2Ch";
+const char* mqtt_server = "10.7.1.1";
+const char* mqtt_username = "smartclassroom";
+const char* mqtt_password = "Reemei8doh";
+const char* mqtt_id = "lights";
+const char* subscribe_lights = "smartclassroom/Lights/on";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -51,7 +51,7 @@ void setup() {
   
 
   ArduinoOTA.setPort(8266);
-  ArduinoOTA.setHostname("NightOwl-Lights");
+  ArduinoOTA.setHostname("Lights");
   ArduinoOTA.setPassword((const char *)"xai0aeQu2g");
   
   ArduinoOTA.onStart([]() {
@@ -86,6 +86,7 @@ void setup_wifi() {
  
 
   WiFi.mode(WIFI_STA);
+  WiFi.hostname("Lights");
   WiFi.begin(ssid, password);
 
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {

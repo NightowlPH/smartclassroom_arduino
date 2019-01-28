@@ -40,14 +40,15 @@ uint16_t rawData_24[73] = {9044, 4472,  654, 1666,  654, 584,  628, 586,  626, 1
 uint16_t rawData_25[73] = {9052, 4468,  654, 1664,  656, 584,  630, 582,  630, 1664,  656, 1664,  656, 556,  656, 1664,  658, 582,  630, 1664,  658, 582,  632, 580,  630, 1664,  658, 582,  630, 582,  630, 582,  630, 584,  630, 582,  630, 584,  628, 584,  628, 584,  630, 584,  628, 584,  628, 586,  628, 584,  628, 586,  626, 586,  626, 586,  626, 586,  626, 1670,  652, 588,  624, 1670,  652, 588,  624, 588,  624, 1670,  652, 588,  624};  // UNKNOWN 655F4B57
 uint16_t rawData_26[73] = {9046, 4472,  652, 1668,  652, 558,  654, 560,  652, 1668,  654, 1666,  654, 558,  654, 1666,  654, 558,  656, 556,  656, 1666,  656, 556,  656, 1666,  656, 556,  656, 558,  656, 556,  656, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 560,  652, 560,  652, 560,  652, 1668,  652, 560,  652, 1668,  654, 560,  652, 560,  652, 1668,  652, 560,  652};  // UNKNOWN 7BFE335B
 
-const char* ssid = "<>";
-const char* password = "<>";
-const char* mqtt_server = "<>";
-const char* mqtt_username = "<>";
-const char* mqtt_password = "<>";
-const char* mqtt_id = "<>";
+const char* ssid = "";
+const char* password = "";
+const char* mqtt_server = "";
+const char* mqtt_username = "";
+const char* mqtt_password = "";
+const char* mqtt_id = "";
 
-const char* subscribe_aircon_on = "smartclassroom/NightOwl/aircon2/on";
+const char* subscribe_aircon_on = "smartclassroom/Aircon/on";
+const char* subscribe_aircon_temperature = "smartclassroom/Aircon temperature/on";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -58,7 +59,6 @@ char button_value[50];
 
 void setup() {
   setup_ir();
-  pinMode(LED_PIN, OUTPUT);
   Serial.begin(115200, SERIAL_8N1, SERIAL_TX_ONLY);
   
   delay(250);
@@ -91,13 +91,14 @@ void setup() {
     else if (error == OTA_END_ERROR) Serial.println("End Failed");
   });
   ArduinoOTA.begin();
-  blink();
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
   reconnect();
   Serial.println(F("-------------------"));
   Serial.println(F("Everything Ready"));
+  pinMode(LED_PIN, OUTPUT);
+  blink();
 }
 
 void setup_ir() {
@@ -130,30 +131,31 @@ void setup_wifi() {
 }
 
 void blink(){
-  digitalWrite(LED_PIN, HIGH);
-  delay(200);
+  Serial.println();
+  Serial.println("Blink");
   digitalWrite(LED_PIN, LOW);
-  delay(500);
+  delay(100);
   digitalWrite(LED_PIN, HIGH);
-  delay(200);
+  delay(100);
   digitalWrite(LED_PIN, LOW);
-  delay(500);
+  delay(100);
   digitalWrite(LED_PIN, HIGH);
-  delay(200);
+  delay(100);
   digitalWrite(LED_PIN, LOW);
-  delay(500);
+  delay(100);
+  digitalWrite(LED_PIN, HIGH);
+  delay(100);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
-  blink();
   Serial.print(topic);
   Serial.print("] ");
   for (int i = 0; i < length; i++) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
-
+  blink();
   memset(button_value, 0, sizeof(button_value));
   strncpy(button_value, (char *)payload, length);
 
@@ -196,6 +198,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   else if(strcmp(button_value, "26")==0) {
     aircon_temp_26();
   }
+  
 }
 
 void reconnect() {
@@ -207,6 +210,7 @@ void reconnect() {
       Serial.println("connected");
       // Once connected, publish an announcement...
       client.subscribe(subscribe_aircon_on);
+      client.subscribe(subscribe_aircon_temperature);
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());

@@ -30,13 +30,11 @@ RST=>D1
 #define RELAY_PIN 3
 
 
-
-
-const char* ssid = "SC_DORM_401";
-const char* password = "zeupheT2Ch";
-const char* mqtt_server = "10.7.1.1";
-const char* mqtt_username = "smartclassroom";
-const char* mqtt_password = "Reemei8doh";
+const char* ssid = "";
+const char* password = "";
+const char* mqtt_server = "";
+const char* mqtt_username = "";
+const char* mqtt_password = "";
 const char* mqtt_id = "lights";
 const char* subscribe_lights = "smartclassroom/Lights/on";
 
@@ -143,6 +141,3 @@ void loop() {
   client.loop();
   reconnect();
 }
-
-
-

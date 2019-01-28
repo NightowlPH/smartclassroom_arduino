@@ -18,6 +18,7 @@ IR send pin: D1
 #include <ArduinoOTA.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
+#include <ir_Daikin.h>
 
 // Update these with values suitable for your network.
 
@@ -38,25 +39,24 @@ uint16_t rawData_24[73] = {9044, 4472,  654, 1666,  654, 584,  628, 586,  626, 1
 uint16_t rawData_25[73] = {9052, 4468,  654, 1664,  656, 584,  630, 582,  630, 1664,  656, 1664,  656, 556,  656, 1664,  658, 582,  630, 1664,  658, 582,  632, 580,  630, 1664,  658, 582,  630, 582,  630, 582,  630, 584,  630, 582,  630, 584,  628, 584,  628, 584,  630, 584,  628, 584,  628, 586,  628, 584,  628, 586,  626, 586,  626, 586,  626, 586,  626, 1670,  652, 588,  624, 1670,  652, 588,  624, 588,  624, 1670,  652, 588,  624};  // UNKNOWN 655F4B57
 uint16_t rawData_26[73] = {9046, 4472,  652, 1668,  652, 558,  654, 560,  652, 1668,  654, 1666,  654, 558,  654, 1666,  654, 558,  656, 556,  656, 1666,  656, 556,  656, 1666,  656, 556,  656, 558,  656, 556,  656, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 560,  652, 560,  652, 560,  652, 1668,  652, 560,  652, 1668,  654, 560,  652, 560,  652, 1668,  652, 560,  652};  // UNKNOWN 7BFE335B
 
-const char* ssid = "SC_NIGHTOWL_LAB";
-const char* password = "a78ae1be68";
-const char* mqtt_server = "10.7.1.1";
-const char* mqtt_username = "smart_classroom";
-const char* mqtt_password = "5dc2deb5fe";
-const char* mqtt_id = "NightOwl-Aircon-RV2";
+const char* ssid = "<>";
+const char* password = "<>";
+const char* mqtt_server = "<>";
+const char* mqtt_username = "<>";
+const char* mqtt_password = "<>";
+const char* mqtt_id = "<>";
 
 const char* subscribe_aircon_on = "smartclassroom/NightOwl/aircon2/on";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-IRsend irsend(IR_SEND_PIN);
+//IRsend irsend(IR_SEND_PIN);
+IRDaikinESP ac(IR_SEND_PIN);
 
 char button_value[50];
 
 void setup() {
-  // Initialize the BUILTIN_LED pin as an output
-  pinMode(IR_SEND_PIN, FUNCTION_3); 
-  irsend.begin();
+  setup_ir();
   Serial.begin(115200, SERIAL_8N1, SERIAL_TX_ONLY);
   
   delay(250);
@@ -95,6 +95,13 @@ void setup() {
   reconnect();
   Serial.println(F("-------------------"));
   Serial.println(F("Everything Ready"));
+}
+
+void setup_ir() {
+  // Initialize the BUILTIN_LED pin as an output
+  //pinMode(IR_SEND_PIN, FUNCTION_3); 
+  //irsend.begin();
+  ac.begin();
 }
 
 void setup_wifi() {
@@ -220,55 +227,85 @@ void aircon_on() {
     reconnect();
   }
   Serial.println("Turning aircon on");
-  irsend.sendRaw(aircon_data_on, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(aircon_data_on, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.on();
+  ac.setFan(10);
+  ac.setTemp(16);
+  ac.setSwingVertical(true);
+  ac.setSwingHorizontal(true);
+  ac.send();
 }
 
 void aircon_off() {
 
   Serial.println("Turning aircon off");
-  irsend.sendRaw(aircon_data_off, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(aircon_data_off, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.off();
+  ac.send();
 }
 
 void aircon_temp_16() {
-  irsend.sendRaw(rawData_16, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(rawData_16, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.setTemp(16);
+  ac.send();
 }
 
 void aircon_temp_17() {
-  irsend.sendRaw(rawData_17, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(rawData_17, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.setTemp(17);
+  ac.send();
 }
 
 void aircon_temp_18() {
-  irsend.sendRaw(rawData_18, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(rawData_18, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.setTemp(18);
+  ac.send();
 }
 
 void aircon_temp_19() {
-  irsend.sendRaw(rawData_19, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(rawData_19, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.setTemp(19);
+  ac.send();
 }
 
 void aircon_temp_20() {
-  irsend.sendRaw(rawData_20, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(rawData_20, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.setTemp(20);
+  ac.send();
 }
 
 void aircon_temp_21() {
-  irsend.sendRaw(rawData_21, 73, 38);  // Send a raw data capture at 38kHz.
+  ///irsend.sendRaw(rawData_21, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.setTemp(21);
+  ac.send();
 }
 
 void aircon_temp_22() {
-  irsend.sendRaw(rawData_22, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(rawData_22, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.setTemp(22);
+  ac.send();
 }
 
 void aircon_temp_23() {
-  irsend.sendRaw(rawData_23, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(rawData_23, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.setTemp(23);
+  ac.send();
 }
 
 void aircon_temp_24() {
-  irsend.sendRaw(rawData_24, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(rawData_24, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.setTemp(24);
+  ac.send();
 }
 
 void aircon_temp_25() {
-  irsend.sendRaw(rawData_25, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(rawData_25, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.setTemp(25);
+  ac.send();
 }
 
 void aircon_temp_26() {
-  irsend.sendRaw(rawData_26, 73, 38);  // Send a raw data capture at 38kHz.
+  //irsend.sendRaw(rawData_26, 73, 38);  // Send a raw data capture at 38kHz.
+  ac.setTemp(26);
+  ac.send();
 }

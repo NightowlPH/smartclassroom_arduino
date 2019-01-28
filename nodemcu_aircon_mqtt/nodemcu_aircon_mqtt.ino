@@ -24,6 +24,7 @@ IR send pin: D1
 
 
 #define IR_SEND_PIN 3
+#define LED_PIN 1
 
 uint16_t aircon_data_on[73] = {9044, 4466,  648, 1670,  652, 586,  626, 588,  626, 1666,  654, 1666,  656, 556,  656, 1664,  658, 580,  632, 580,  632, 554,  660, 552,  650, 562,  650, 564,  648, 590,  624, 562,  650, 562,  650, 562,  650, 562,  652, 562,  650, 562,  652, 560,  652, 560,  652, 560,  652, 560,  652, 586,  626, 560,  652, 560,  652, 560,  652, 1666,  654, 558,  654, 1664,  658, 554,  658, 556,  656, 1662,  660, 552,  660};  // UNKNOWN 1A3AEF63
 uint16_t aircon_data_off[73] = {9030, 4456,  658, 1658,  652, 584,  628, 580,  622, 588,  624, 1664,  656, 580,  622, 1666,  654, 584,  628, 582,  620, 590,  624, 586,  626, 584,  628, 582,  630, 580,  622, 588,  624, 586,  626, 584,  628, 582,  620, 590,  624, 586,  626, 584,  628, 582,  630, 580,  622, 588,  624, 586,  626, 584,  628, 582,  630, 580,  622, 1666,  656, 582,  630, 1658,  652, 584,  628, 582,  630, 1660,  652, 586,  628};  // UNKNOWN ABD88E13
@@ -57,6 +58,7 @@ char button_value[50];
 
 void setup() {
   setup_ir();
+  pinMode(LED_PIN, OUTPUT);
   Serial.begin(115200, SERIAL_8N1, SERIAL_TX_ONLY);
   
   delay(250);
@@ -89,6 +91,7 @@ void setup() {
     else if (error == OTA_END_ERROR) Serial.println("End Failed");
   });
   ArduinoOTA.begin();
+  blink();
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
@@ -126,8 +129,24 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
+void blink(){
+  digitalWrite(LED_PIN, HIGH);
+  delay(200);
+  digitalWrite(LED_PIN, LOW);
+  delay(500);
+  digitalWrite(LED_PIN, HIGH);
+  delay(200);
+  digitalWrite(LED_PIN, LOW);
+  delay(500);
+  digitalWrite(LED_PIN, HIGH);
+  delay(200);
+  digitalWrite(LED_PIN, LOW);
+  delay(500);
+}
+
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
+  blink();
   Serial.print(topic);
   Serial.print("] ");
   for (int i = 0; i < length; i++) {

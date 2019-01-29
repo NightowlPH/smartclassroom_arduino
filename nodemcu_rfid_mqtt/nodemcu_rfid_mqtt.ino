@@ -37,6 +37,7 @@
 #define TAGSIZE 12
 #define RELAY_PIN 10
 #define SWITCH_PIN 9 //Switch
+#define LED_PIN D0
 
 uint8_t successRead; //variable integer to keep if we hace successful read
 
@@ -84,6 +85,8 @@ void setup() {
   client.publish(door_open_announce_topic, "false");
   Serial.println(F("-------------------"));
   Serial.println(F("Everything Ready"));
+  pinMode(LED_PIN, OUTPUT);
+  blink();
   Serial.println(F("Waiting PICCs to be scanned"));
 }
 
@@ -119,6 +122,23 @@ void setup_ota() {
   ArduinoOTA.begin();
 }
 
+void blink(){
+  Serial.println();
+  Serial.println("Blink");
+  digitalWrite(LED_PIN, LOW);
+  delay(100);
+  digitalWrite(LED_PIN, HIGH);
+  delay(100);
+  digitalWrite(LED_PIN, LOW);
+  delay(100);
+  digitalWrite(LED_PIN, HIGH);
+  delay(100);
+  digitalWrite(LED_PIN, LOW);
+  delay(100);
+  digitalWrite(LED_PIN, HIGH);
+  delay(100);
+}
+
 void setup_wifi() {
 
   delay(10);
@@ -150,6 +170,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   Serial.println();
 
+  blink();
   memset(button_value, 0, sizeof(button_value));
   strncpy(button_value, (char *)payload, length);
 

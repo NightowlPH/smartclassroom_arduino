@@ -21,35 +21,44 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <SPI.h>
+#include <Ticker.h>
 #include <MFRC522.h>  // Library for Mifare RC522 Devices
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 
-// Update these with values suitable for your network.
+Ticker unlocker;
+Ticker blinker;
 
 
 #define RST_PIN D1  // RST-PIN für RC522 - RFID - SPI - Modul GPIO15 
 #define SS_PIN  D2 // SDA-PIN für RC522 - RFID - SPI - Modul GPIO2 
 
-#define BUZZER_PIN 0 //buzzer
+#define BUZZER_PIN D3 //buzzer
 #define LED_PIN2 D4 //red 
 #define TAGSIZE 12
 #define RELAY_PIN 10
-#define SWITCH_PIN 9 //Switch
+#define SWITCH_PIN D8 //Switch
 #define LED_PIN D0
 
+
 uint8_t successRead; //variable integer to keep if we hace successful read
+
+uint8_t numblink;
+uint8_t maxblink;
 
 byte readCard[8]; //Stores scanned ID
 char temp[3];
 char cardID[9];
 
-const char* ssid = "<>";
-const char* password = "<>";
-const char* mqtt_server = "<>";
-const char* mqtt_username = "<>";
-const char* mqtt_password = "<>";
+const int switch_interrupt = digitalPinToInterrupt(SWITCH_PIN);
+
+// Update these with values suitable for your network.
+const char* ssid = "";
+const char* password = "";
+const char* mqtt_server = "";
+const char* mqtt_username = "";
+const char* mqtt_password = "";
 const char* mqtt_id = "door";
 const char* cardread_topic = "smartclassroom/Door/cardread";
 const char* lock_topic = "smartclassroom/Door/open";
@@ -65,11 +74,13 @@ MFRC522::MIFARE_Key key;
 char button_value[50];
 
 void setup() {
-  // Initialize the BUILTIN_LED pin as an output
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(LED_PIN2, OUTPUT);
   pinMode(RELAY_PIN, OUTPUT);
-  pinMode(SWITCH_PIN, INPUT_PULLUP);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);
+  digitalWrite(LED_PIN2, HIGH);
+  lock();
   Serial.begin(115200);
   SPI.begin();
 
@@ -85,9 +96,7 @@ void setup() {
   client.publish(door_open_announce_topic, "false");
   Serial.println(F("-------------------"));
   Serial.println(F("Everything Ready"));
-  pinMode(LED_PIN, OUTPUT);
-  blink();
-  Serial.println(F("Waiting PICCs to be scanned"));
+  Serial.println(("Waiting PICCs to be scanned"));
 }
 
 void setup_ota() {
@@ -122,21 +131,31 @@ void setup_ota() {
   ArduinoOTA.begin();
 }
 
-void blink(){
+void blink(uint8_t num_blink, uint8_t delay_time){
+  //blink num_blink times with delay_time interval
   Serial.println();
   Serial.println("Blink");
-  digitalWrite(LED_PIN, LOW);
-  delay(100);
-  digitalWrite(LED_PIN, HIGH);
-  delay(100);
-  digitalWrite(LED_PIN, LOW);
-  delay(100);
-  digitalWrite(LED_PIN, HIGH);
-  delay(100);
-  digitalWrite(LED_PIN, LOW);
-  delay(100);
-  digitalWrite(LED_PIN, HIGH);
-  delay(100);
+  maxblink = num_blink;
+  numblink = 0;
+  blinker.attach_ms(delay_time, switch_led);
+}
+
+void switch_led(){
+  //turn the LED off if its on, or on if its off, as long as we should be blinking
+  uint8_t led_state = digitalRead(LED_PIN);
+  if(led_state == HIGH){
+    //turn on
+    digitalWrite(LED_PIN, LOW);
+  }
+  else{
+    //turn off again, and advance num_blink;
+    digitalWrite(LED_PIN, HIGH);
+    numblink++;
+  }
+  if(numblink>=maxblink){
+    //stop blinking because we blinked the maximum number
+    blinker.detach();
+  }
 }
 
 void setup_wifi() {
@@ -162,6 +181,7 @@ void setup_wifi() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
+  //callback for handling incoming MQTT messages for topics we subscribed too
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
@@ -170,7 +190,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   Serial.println();
 
-  blink();
+  blink(4, 200);
   memset(button_value, 0, sizeof(button_value));
   strncpy(button_value, (char *)payload, length);
 
@@ -184,9 +204,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
+
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
+    int reconnect_time = 0;
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
     if (client.connect(mqtt_id, mqtt_username, mqtt_password)) {
@@ -200,6 +222,7 @@ void reconnect() {
       // Wait 5 seconds before retrying
       delay(5000);
     }
+    blink(3,200);
   }
 }
 
@@ -207,7 +230,7 @@ bool ota_flag = true;
 uint16_t time_elapsed = 0;
 
 void loop() {
-//  int sensorVal = digitalRead(SWITCH_PIN);
+
   
   if (ota_flag)
   {
@@ -221,16 +244,6 @@ void loop() {
   }
   delay(500); 
   do {
-    if (digitalRead(SWITCH_PIN) == LOW) {
-      Serial.println("Door Unlock");
-      Serial.println("Publishing door unlock");
-      client.publish(door_open_announce_topic, "true");
-      unlock(5000);
-    }
-//    else {
-//      Serial.println("Door Lock");
-//      digitalWrite(RELAY_PIN, HIGH);
-//    }
     if (!client.connected()) {
       reconnect();
     }
@@ -292,17 +305,25 @@ void ShowReaderDetails() {
   }
 }
 
+void unlock_button() {
+  //called when the button to unlock the door is pressed through an interrupt
+  detachInterrupt(switch_interrupt); //Make sure the interrupt isn't triggered as long as the door is open.
+  Serial.println("Button pressed");
+  unlock(5000);
+}
+
 void unlock(int unlock_time) {
+  //unlock the door for unlock_time milliseconds. If unlock_time <=0, stay open
+  blink(2,200);
+  Serial.println("Unlocking");
   if(digitalRead(RELAY_PIN) == HIGH){
     digitalWrite(RELAY_PIN, LOW);
     digitalWrite(BUZZER_PIN, HIGH);
     //  digitalWrite(LED_PIN2, LOW);
     Serial.println("Unlock");
     if(unlock_time>0){
-     delay(unlock_time);
-     lock();
-     Serial.println("Publishing door lock");
-     client.publish(door_open_announce_topic, "false");
+      //set the timer to lock the door in unlock_time milliseconds
+      unlocker.attach_ms(unlock_time, auto_lock);
     }
   }
   else{
@@ -310,10 +331,18 @@ void unlock(int unlock_time) {
   }
 }
 
-void lock() {
-  while (!client.connected()) {
-    reconnect();
-  }
+void auto_lock(){
+  //called when the door is locked automatically by the code
+  unlocker.detach();
+  client.publish(door_open_announce_topic, "false");
+  lock();
+}
+
+void lock() { 
+  //lock the door
+  blink(2, 200);
+  Serial.println("Locking");
+  attachInterrupt(switch_interrupt, unlock_button, RISING); //attach the interrupt again to listen for the unlock button press
   if(digitalRead(RELAY_PIN) == LOW){
     digitalWrite(RELAY_PIN, HIGH);
     digitalWrite(BUZZER_PIN, LOW);

@@ -44,8 +44,8 @@ Ticker blinker;
 
 uint8_t successRead; //variable integer to keep if we hace successful read
 
-uint8_t numblink;
-uint8_t maxblink;
+uint32_t numblink;
+uint32_t maxblink;
 
 byte readCard[8]; //Stores scanned ID
 char temp[3];
@@ -220,6 +220,7 @@ void reconnect() {
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
+      blink(50000, 100); //Blink fast in the mean time with 100ms intervals
       delay(5000);
     }
     blink(3,200);
@@ -351,4 +352,4 @@ void lock() {
   else{
     Serial.println("Already locked");
   }
-}
+} 

@@ -131,7 +131,7 @@ void setup_ota() {
   ArduinoOTA.begin();
 }
 
-void blink(uint8_t num_blink, uint8_t delay_time){
+void blink(uint32_t num_blink, uint16_t delay_time){
   //blink num_blink times with delay_time interval
   Serial.println();
   Serial.println("Blink");

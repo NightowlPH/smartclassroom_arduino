@@ -19,6 +19,9 @@ IR send pin: D1
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
 #include <ir_Daikin.h>
+#include <Ticker.h>
+
+
 
 // Update these with values suitable for your network.
 
@@ -45,11 +48,15 @@ const char* password = "";
 const char* mqtt_server = "";
 const char* mqtt_username = "";
 const char* mqtt_password = "";
-const char* mqtt_id = "";
+const char* mqtt_id = "aircon";
 
 const char* subscribe_aircon_on = "smartclassroom/Aircon/on";
 const char* subscribe_aircon_temperature = "smartclassroom/Aircon temperature/on";
 
+uint32_t numblink;
+uint32_t maxblink;
+
+Ticker blinker;
 WiFiClient espClient;
 PubSubClient client(espClient);
 //IRsend irsend(IR_SEND_PIN);
@@ -98,7 +105,6 @@ void setup() {
   Serial.println(F("-------------------"));
   Serial.println(F("Everything Ready"));
   pinMode(LED_PIN, OUTPUT);
-  blink();
 }
 
 void setup_ir() {
@@ -120,6 +126,7 @@ void setup_wifi() {
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
+    blink(5, 100);
     delay(500);
     Serial.print(".");
   }
@@ -130,21 +137,29 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-void blink(){
-  Serial.println();
-  Serial.println("Blink");
-  digitalWrite(LED_PIN, LOW);
-  delay(100);
-  digitalWrite(LED_PIN, HIGH);
-  delay(100);
-  digitalWrite(LED_PIN, LOW);
-  delay(100);
-  digitalWrite(LED_PIN, HIGH);
-  delay(100);
-  digitalWrite(LED_PIN, LOW);
-  delay(100);
-  digitalWrite(LED_PIN, HIGH);
-  delay(100);
+void blink(uint32_t num_blink, uint16_t delay_time){
+  //blink num_blink times with delay_time interval
+  maxblink = num_blink;
+  numblink = 0;
+  blinker.attach_ms(delay_time, switch_led);
+}
+
+void switch_led(){
+  //turn the LED off if its on, or on if its off, as long as we should be blinking
+  uint8_t led_state = digitalRead(LED_PIN);
+  if(led_state == HIGH){
+    //turn on
+    digitalWrite(LED_PIN, LOW);
+  }
+  else{
+    //turn off again, and advance num_blink;
+    digitalWrite(LED_PIN, HIGH);
+    numblink++;
+  }
+  if(numblink>=maxblink){
+    //stop blinking because we blinked the maximum number
+    blinker.detach();
+  }
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -155,7 +170,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
-  blink();
+  blink(4, 200);
   memset(button_value, 0, sizeof(button_value));
   strncpy(button_value, (char *)payload, length);
 
@@ -216,9 +231,11 @@ void reconnect() {
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
+      blink(50000, 100); //Blink fast in the mean time with 100ms intervals
       delay(5000);
     }
   }
+  blink(3,200);
 }
 
 bool ota_flag = true;
@@ -252,6 +269,7 @@ void aircon_on() {
   Serial.println("Turning aircon on");
   //irsend.sendRaw(aircon_data_on, 73, 38);  // Send a raw data capture at 38kHz.
   ac.on();
+  ac.setMode(3);
   ac.setFan(10);
   ac.setTemp(16);
   ac.setSwingVertical(true);

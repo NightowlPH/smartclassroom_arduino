@@ -49,7 +49,7 @@ uint16_t sanyo_temp_data[11][73] = {
   {9046, 4472,  652, 1668,  652, 558,  654, 560,  652, 1668,  654, 1666,  654, 558,  654, 1666,  654, 558,  656, 556,  656, 1666,  656, 556,  656, 1666,  656, 556,  656, 558,  656, 556,  656, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 560,  652, 560,  652, 560,  652, 1668,  652, 560,  652, 1668,  654, 560,  652, 560,  652, 1668,  652, 560,  652}  // UNKNOWN 7BFE335B
 };
 
-char button_value[50];
+char payload_value[50];
 SmartClassroom sc;
 
 void sub_func(){
@@ -101,18 +101,18 @@ void callback(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-  memset(button_value, 0, sizeof(button_value));
-  strncpy(button_value, (char *)payload, length);
+  memset(payload_value, 0, sizeof(payload_value));
+  strncpy(payload_value, (char *)payload, length);
 
-  if(strcmp(button_value, "true")==0) {
+  if(strcmp(payload_value, "true")==0) {
     aircon_on();
     return;
   }
-  else if(strcmp(button_value, "false")==0) {
+  else if(strcmp(payload_value, "false")==0) {
     aircon_off();
     return;
   }
-  int temp = atoi(button_value);
+  int temp = atoi(payload_value);
   if(temp >= 16 & temp <= 26){
     aircon_temp(temp);
     return;

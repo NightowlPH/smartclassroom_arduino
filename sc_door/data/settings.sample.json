@@ -1,0 +1,8 @@
+{
+	"ssid": "some_wifi",
+	"password": "some_password",
+	"mqtt_server":"mq.t.t.ip",
+	"mqtt_username":"username",
+	"mqtt_password":"another_password",
+	"mqtt_id": "door"
+}

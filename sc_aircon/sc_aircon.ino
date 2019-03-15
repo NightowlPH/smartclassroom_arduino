@@ -19,6 +19,8 @@ IR send pin: D1
 
 // Update these with values suitable for your network.
 #define IR_SEND_PIN 3
+#define LED_PIN 1
+#define LED2_PIN 1
 
 IRDaikinESP ac(IR_SEND_PIN);
 IRsend irsend(IR_SEND_PIN);
@@ -59,7 +61,7 @@ void sub_func(){
 void setup() {
   setup_ir();
   Serial.begin(115200, SERIAL_8N1, SERIAL_TX_ONLY);
-  sc.begin(1, 1);
+  sc.begin(LED_PIN, LED2_PIN);
   sc.mqtt.setCallback(callback);
   sc.reconnect(sub_func);
   Serial.println(F("-------------------"));

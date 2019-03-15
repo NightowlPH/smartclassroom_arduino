@@ -10,26 +10,18 @@ This sketch uses and ESP8266/nodemcu board to control a SANYO airconditioning th
 IR send pin: D1
 
 */
-
-#include <ESP8266WiFi.h>
-
-#include <ESP8266HTTPClient.h>
-#include <ESP8266httpUpdate.h>
-#include <PubSubClient.h>
-
+#include <smart_classroom.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
 #include <ir_Daikin.h>
-#include <Ticker.h>
-#include <FS.h>
-#include <ArduinoJson.h>
+
 
 
 // Update these with values suitable for your network.
-
-
 #define IR_SEND_PIN 3
-#define LED_PIN 1
+
+IRDaikinESP ac(IR_SEND_PIN);
+IRsend irsend(IR_SEND_PIN);
 
 #define SANYO_AC 0
 
@@ -55,128 +47,40 @@ uint16_t sanyo_temp_data[11][73] = {
   {9046, 4472,  652, 1668,  652, 558,  654, 560,  652, 1668,  654, 1666,  654, 558,  654, 1666,  654, 558,  656, 556,  656, 1666,  656, 556,  656, 1666,  656, 556,  656, 558,  656, 556,  656, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 558,  654, 560,  652, 560,  652, 560,  652, 1668,  652, 560,  652, 1668,  654, 560,  652, 560,  652, 1668,  652, 560,  652}  // UNKNOWN 7BFE335B
 };
 
-
-uint32_t numblink;
-uint32_t maxblink;
-char c;
-
-struct Settings{
-  char ssid[64];
-  char password[64];
-  char mqtt_server[15];
-  char mqtt_username[32];
-  char mqtt_password[32];
-  char mqtt_id[32];
-};
-
-struct Settings settings;
-
-Ticker blinker;
-
-WiFiClient espClient;
-PubSubClient client(espClient);
-#if SANYO_AC
-IRsend irsend(IR_SEND_PIN);
-#else
-IRDaikinESP ac(IR_SEND_PIN);
-#endif
-
 char button_value[50];
+SmartClassroom sc;
+
+void sub_func(){
+  sc.mqtt.subscribe(subscribe_aircon_on);
+  sc.mqtt.subscribe(subscribe_aircon_temperature);
+  sc.mqtt.subscribe(subscribe_update_topic);
+}
 
 void setup() {
   setup_ir();
   Serial.begin(115200, SERIAL_8N1, SERIAL_TX_ONLY);
-  SPIFFS.begin();
-  read_settings();
-  
-  delay(250);
-  setup_wifi();
-  
-  client.setServer(settings.mqtt_server, 1883);
-  client.setCallback(callback);
-  reconnect();
+  sc.begin(1, 1);
+  sc.mqtt.setCallback(callback);
+  sc.reconnect(sub_func);
   Serial.println(F("-------------------"));
   Serial.println(F("Everything Ready"));
-  pinMode(LED_PIN, OUTPUT);
 }
 
 void setup_ir() {
   #if SANYO_AC
-    pinMode(IR_SEND_PIN, FUNCTION_3);
-    irsend.begin();
+    setup_ir_sanyo();
   #else
-    ac.begin();
+    setup_ir_daikin();
   #endif
 }
 
-void setup_wifi() {
-
-  delay(10);
-  // We start by connecting to a WiFi network
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(settings.ssid);
-
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(settings.ssid, settings.password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    blink(5, 100);
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+void setup_ir_daikin() {
+  ac.begin();
 }
 
-
-void read_settings() {
-  File f = SPIFFS.open("/settings.json", "r");
-  Serial.println("");
-  Serial.println("Opening /settings.json");
-  if(!f){
-    Serial.println("Failed to read file");
-    return;
-  }
-  const size_t capacity = JSON_OBJECT_SIZE(6) + 160;
-  DynamicJsonBuffer jsonBuffer(capacity);
-  JsonObject &root = jsonBuffer.parseObject(f);
-  if(!root.success()){
-    Serial.println("Failed to read file");
-    return;
-  }
-  f.close();
-  Serial.println("Finished parsing settings file");
-  strlcpy(settings.ssid, root["ssid"], sizeof(settings.ssid));
-  strlcpy(settings.password, root["password"], sizeof(settings.password));
-  strlcpy(settings.mqtt_server, root["mqtt_server"], sizeof(settings.mqtt_server));
-  strlcpy(settings.mqtt_username, root["mqtt_username"], sizeof(settings.mqtt_username));
-  strlcpy(settings.mqtt_password, root["mqtt_password"], sizeof(settings.mqtt_password));
-  strlcpy(settings.mqtt_id, root["mqtt_id"], sizeof(settings.mqtt_id));
-}
-
-void blink(uint32_t num_blink, uint16_t delay_time){
-  //blink num_blink times with delay_time interval
-  maxblink = num_blink;
-  numblink = 0;
-  blinker.attach_ms(delay_time, switch_led);
-}
-
-void switch_led() {
-  //turn the LED off if its on, or on if its off, as long as we should be blinking
-  uint8_t led_state = digitalRead(LED_PIN);
-  digitalWrite(LED_PIN, !led_state);
-  if (led_state == LOW) {
-    //LED was on, now turned off again, advance num_blink;
-    numblink++;
-  }
-  if (numblink >= maxblink) {
-    //stop blinking because we blinked the maximum number
-    blinker.detach();
-  }
+void setup_ir_sanyo() {
+  pinMode(IR_SEND_PIN, FUNCTION_3);
+  irsend.begin();
 }
 
 
@@ -188,10 +92,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
-  blink(4, 200);
+  sc.blink(4, 200);
   
   if(strcmp(topic, subscribe_update_topic) == 0){
-    checkUpdate((char *)payload);
+    sc.checkUpdate((char *)payload);
     return;
   }
 
@@ -200,101 +104,82 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   if(strcmp(button_value, "true")==0) {
     aircon_on();
+    return;
   }
   else if(strcmp(button_value, "false")==0) {
     aircon_off();
     return;
   }
-  if((int) (&button_value - '0') >= 16 & (int) (&button_value - '0') <= 26){
-    aircon_temp((int) (&button_value - '0'));
+  int temp = atoi(button_value);
+  if(temp >= 16 & temp <= 26){
+    aircon_temp(temp);
     return;
   }
   
 }
 
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect
-    if (client.connect(settings.mqtt_id, settings.mqtt_username, settings.mqtt_password)) {
-      Serial.println("connected");
-      // Once connected, publish an announcement...
-      client.subscribe(subscribe_aircon_on);
-      client.subscribe(subscribe_aircon_temperature);
-      client.subscribe(subscribe_update_topic);
-      blink(3, 200);
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      blink(50000, 100); //Blink fast in the mean time with 100ms intervals
-      delay(5000);
-    }
-  }
-  
-}
-
-void checkUpdate(char* update_uri) {
-  Serial.print("Checking for update on url ");
-  Serial.println(update_uri);
-  ESPhttpUpdate.setLedPin(LED_PIN, LOW);
-  t_httpUpdate_return ret = ESPhttpUpdate.update(update_uri);
-  switch (ret) {
-      case HTTP_UPDATE_FAILED:
-        Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-        break;
-
-      case HTTP_UPDATE_NO_UPDATES:
-        Serial.println("HTTP_UPDATE_NO_UPDATES");
-        break;
-
-      case HTTP_UPDATE_OK:
-        Serial.println("HTTP_UPDATE_OK");
-        break;
-    }
-}
-
 void loop() {
-  if (!client.connected()) {
-    reconnect();
+  if (!sc.mqtt.connected()) {
+    sc.reconnect(sub_func);
   }
-  client.loop();
+  sc.mqtt.loop();
   delay(500); 
 }
 
-
-void aircon_on() {
+void aircon_on(){
   Serial.println("Turning aircon on");
   #if SANYO_AC
-  irsend.sendRaw(sanyo_data_on, 73, 38);  // Send a raw data capture at 38kHz.
+    aircon_on_sanyo();
   #else
+    aircon_on_daikin();
+  #endif
+}
+
+void aircon_on_sanyo() {
+  irsend.sendRaw(sanyo_data_on, 73, 38);  // Send a raw data capture at 38kHz.
+}
+
+void aircon_on_daikin() {
   ac.on();
   ac.setMode(3);
   ac.setFan(10);
   ac.setSwingVertical(true);
   ac.setSwingHorizontal(true);
   ac.send();
-  #endif
+}
+
+void aircon_off_daikin() {
+    ac.off();
+    ac.send();
+}
+
+void aircon_off_sanyo() {
+    irsend.sendRaw(sanyo_data_off, 73, 38);  // Send a raw data capture at 38kHz.
 }
 
 void aircon_off() {
-
   Serial.println("Turning aircon off");
   #if SANYO_AC
-    irsend.sendRaw(sanyo_data_off, 73, 38);  // Send a raw data capture at 38kHz.
+    aircon_off_sanyo();
   #else
-    ac.off();
-    ac.send();
+    aircon_off_daikin();
   #endif
 }
 
 void aircon_temp(int temp) {
+  Serial.printf("Setting temp to %d\n", temp);
   #if SANYO_AC
-    irsend.sendRaw(sanyo_temp_data[temp-16], 73, 38);  // Send a raw data capture at 38kHz.
+    aircon_temp_sanyo(temp);
   #else
-    ac.setTemp(temp);
-    ac.send();
+    aircon_temp_daikin(temp);
   #endif
+}
+
+void aircon_temp_sanyo(int temp) {
+  irsend.sendRaw(sanyo_temp_data[temp-16], 73, 38);  // Send a raw data capture at 38kHz.
+}
+
+void aircon_temp_daikin(int temp) {
+  ac.setTemp(temp);
+  ac.send();
 }

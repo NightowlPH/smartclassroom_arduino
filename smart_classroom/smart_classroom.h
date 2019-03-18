@@ -10,6 +10,8 @@
 #ifndef smart_classroom_h
 #define smart_classroom_h
 
+#define MAXTOPICS 20
+
 
 struct Settings{
   public:
@@ -27,7 +29,7 @@ class SmartClassroom {
         WiFiClient espClient;
         PubSubClient mqtt;
         void begin(uint8_t led_pin, uint8_t led2_pin);
-        void reconnect(void (*sub_func)());
+        void reconnect(const char* topics[MAXTOPICS], uint8_t numtopics, const char* version);
         void checkUpdate(char* update_uri);
         uint32_t numblink;
         uint32_t maxblink;

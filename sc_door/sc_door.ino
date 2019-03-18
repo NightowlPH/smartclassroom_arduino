@@ -30,16 +30,12 @@ const char* lock_topic = "smartclassroom/Door/open";
 const char* door_open_topic = "smartclassroom/Door/open";
 const char* door_open_announce_topic = "smartclassroom/Door/announce/open";
 const char* update_topic = "smartclassroom/Door/update";
+const char* sub_topics[] = {lock_topic, door_open_topic, update_topic};
+const char* version = "1.2";
 
 SmartClassroom sc;
 MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
 MFRC522::MIFARE_Key key;
-
-void sub_func(){
-    sc.mqtt.subscribe(lock_topic);
-    sc.mqtt.subscribe(door_open_topic);
-    sc.mqtt.subscribe(update_topic);
-}
 
 char payload_value[50];
 
@@ -52,6 +48,8 @@ void setup() {
   SPI.begin();
   mfrc522.PCD_Init(); //Initialize MFRC522 hardware
   sc.begin(LED_PIN, LED2_PIN);
+  sc.mqtt.setCallback(callback);
+  sc.reconnect(sub_topics, sizeof(sub_topics)/sizeof(*sub_topics), version);
   //ShowReaderDetails();
   sc.mqtt.publish(door_open_announce_topic, "false");
   Serial.println(F("-------------------"));
@@ -70,14 +68,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
 
   sc.blink(4, 200);
-
-  if(strcmp(topic, update_topic) == 0){
-    sc.checkUpdate((char *)payload);
-    return;
-  }
   
   memset(payload_value, 0, sizeof(payload_value));
   strncpy(payload_value, (char *)payload, length);
+
+  if(strcmp(topic, update_topic) == 0){
+    sc.checkUpdate(payload_value);
+    return;
+  }
 
   if (strcmp(payload_value, "true") == 0) {
     //digitalWrite(LED_PIN, HIGH);
@@ -93,7 +91,7 @@ void loop() {
   
   do {
     if (!sc.mqtt.connected()) {
-      sc.reconnect(sub_func);
+      sc.reconnect(sub_topics, sizeof(sub_topics)/sizeof(*sub_topics), version);
     }
     sc.mqtt.loop();
     successRead = getID();

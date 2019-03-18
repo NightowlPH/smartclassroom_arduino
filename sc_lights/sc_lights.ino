@@ -9,6 +9,8 @@
 
 const char* subscribe_lights_topic = "smartclassroom/Lights/on";
 const char* subscribe_update_topic = "smartclassroom/Lights/update";
+const char* sub_topics[] = {subscribe_lights_topic, subscribe_update_topic};
+const char* version = "1.2";
 
 struct State{
   bool lights;
@@ -18,11 +20,6 @@ State state;
 
 char payload_value[50];
 SmartClassroom sc;
-
-void sub_func(){
-  sc.mqtt.subscribe(subscribe_lights_topic);
-  sc.mqtt.subscribe(subscribe_update_topic);
-}
 
 void setup() {
   // Initialize the BUILTIN_LED pin as an output
@@ -38,7 +35,7 @@ void setup() {
     digitalWrite(RELAY_PIN, LOW);
   }
   sc.mqtt.setCallback(callback);
-  sc.reconnect(sub_func);
+  sc.reconnect(sub_topics, sizeof(sub_topics)/sizeof(*sub_topics), version);
   
   Serial.println(F("Everything Ready"));
   pinMode(LED_PIN, OUTPUT);
@@ -94,13 +91,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println("");
   sc.blink(4, 200);
 
-  if (strcmp(topic, subscribe_update_topic) == 0) {
-    sc.checkUpdate((char *)payload);
-    return;
-  }
-
   memset(payload_value, 0, sizeof(payload_value));
   strncpy(payload_value, (char *)payload, length);
+
+  if (strcmp(topic, subscribe_update_topic) == 0) {
+    sc.checkUpdate(payload_value);
+    return;
+  }
 
   if (strcmp(payload_value, "true") == 0) {
     digitalWrite(RELAY_PIN, HIGH);
@@ -115,7 +112,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void loop() {
   if (!sc.mqtt.connected()) {
-    sc.reconnect(sub_func);
+    sc.reconnect(sub_topics, sizeof(sub_topics)/sizeof(*sub_topics), version);
   }
   sc.mqtt.loop();
   delay(500);

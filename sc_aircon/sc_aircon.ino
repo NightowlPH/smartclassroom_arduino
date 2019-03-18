@@ -27,10 +27,12 @@ IRsend irsend(IR_SEND_PIN);
 
 #define SANYO_AC 0
 
+const char* version = "1.2";
 
 const char* subscribe_aircon_on = "smartclassroom/Aircon/on";
 const char* subscribe_update_topic = "smartclassroom/Aircon/update";
 const char* subscribe_aircon_temperature = "smartclassroom/Aircon temperature/on";
+const char* sub_topics[] = {subscribe_aircon_on, subscribe_update_topic, subscribe_aircon_temperature};
 
 
 uint16_t sanyo_data_on[73] = {9044, 4466,  648, 1670,  652, 586,  626, 588,  626, 1666,  654, 1666,  656, 556,  656, 1664,  658, 580,  632, 580,  632, 554,  660, 552,  650, 562,  650, 564,  648, 590,  624, 562,  650, 562,  650, 562,  650, 562,  652, 562,  650, 562,  652, 560,  652, 560,  652, 560,  652, 560,  652, 586,  626, 560,  652, 560,  652, 560,  652, 1666,  654, 558,  654, 1664,  658, 554,  658, 556,  656, 1662,  660, 552,  660};  // UNKNOWN 1A3AEF63
@@ -52,18 +54,12 @@ uint16_t sanyo_temp_data[11][73] = {
 char payload_value[50];
 SmartClassroom sc;
 
-void sub_func(){
-  sc.mqtt.subscribe(subscribe_aircon_on);
-  sc.mqtt.subscribe(subscribe_aircon_temperature);
-  sc.mqtt.subscribe(subscribe_update_topic);
-}
-
 void setup() {
   setup_ir();
   Serial.begin(115200, SERIAL_8N1, SERIAL_TX_ONLY);
   sc.begin(LED_PIN, LED2_PIN);
   sc.mqtt.setCallback(callback);
-  sc.reconnect(sub_func);
+  sc.reconnect(sub_topics, sizeof(sub_topics)/sizeof(*sub_topics), version);
   Serial.println(F("-------------------"));
   Serial.println(F("Everything Ready"));
 }
@@ -95,14 +91,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   Serial.println();
   sc.blink(4, 200);
-  
-  if(strcmp(topic, subscribe_update_topic) == 0){
-    sc.checkUpdate((char *)payload);
-    return;
-  }
 
   memset(payload_value, 0, sizeof(payload_value));
   strncpy(payload_value, (char *)payload, length);
+  
+  if(strcmp(topic, subscribe_update_topic) == 0){
+    sc.checkUpdate(payload_value);
+    return;
+  }
 
   if(strcmp(payload_value, "true")==0) {
     aircon_on();
@@ -122,7 +118,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void loop() {
   if (!sc.mqtt.connected()) {
-    sc.reconnect(sub_func);
+    sc.reconnect(sub_topics, sizeof(sub_topics)/sizeof(*sub_topics), version);
   }
   sc.mqtt.loop();
   delay(500); 

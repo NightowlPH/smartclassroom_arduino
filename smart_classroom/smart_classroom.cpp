@@ -4,6 +4,8 @@ void SmartClassroom::begin(uint8_t led_pin, uint8_t led2_pin){
     SPIFFS.begin();
     m_led_pin = led_pin;
     m_led2_pin = led2_pin;
+    pinMode(m_led_pin, OUTPUT);
+    pinMode(m_led2_pin, OUTPUT);
     mqtt = PubSubClient(espClient);
     set_settings(read_settings());
     setup_wifi();
@@ -11,7 +13,7 @@ void SmartClassroom::begin(uint8_t led_pin, uint8_t led2_pin){
 }
 
 
-void SmartClassroom::reconnect(void (*sub_func)() ) {
+void SmartClassroom::reconnect(const char* topics[MAXTOPICS], uint8_t numtopics, const char* version) {
   // Loop until we're reconnected
   while (!mqtt.connected()) {
     Serial.print("Attempting MQTT connection...");
@@ -19,7 +21,12 @@ void SmartClassroom::reconnect(void (*sub_func)() ) {
     if (mqtt.connect(settings.mqtt_id, settings.mqtt_username, settings.mqtt_password)) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      sub_func();
+      char msg[60];
+      sprintf(msg, "{\"version\": \"%s\", \"mqtt_id\": \"%s\"}", version, settings.mqtt_id);
+      mqtt.publish("smartclassroom/connected", msg);
+      for(int i=0;i<numtopics;i++){
+          mqtt.subscribe(topics[i]);
+      }
       blink(3, 200);
     } else {
       Serial.print("failed, rc=");

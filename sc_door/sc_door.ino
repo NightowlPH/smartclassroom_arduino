@@ -14,7 +14,7 @@ Ticker unlocker;
 #define LED2_PIN D4
 
 #define SWITCH_PIN_MODE INPUT
-#define SWITCH_PIN_DETECT_EDGE RISING
+#define SWITCH_PIN_DETECT_EDGE HIGH
 #define SWITCH_PIN D8
 
 uint8_t successRead; //variable integer to keep if we hace successful read
@@ -31,7 +31,7 @@ const char* door_open_topic = "smartclassroom/Door/open";
 const char* door_open_announce_topic = "smartclassroom/Door/announce/open";
 const char* update_topic = "smartclassroom/Door/update";
 const char* sub_topics[] = {lock_topic, door_open_topic, update_topic};
-const char* version = "1.2";
+const char* version = "1.4";
 
 SmartClassroom sc;
 MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
@@ -153,6 +153,11 @@ void ShowReaderDetails() {
 
 void unlock_button() {
   //called when the button to unlock the door is pressed through an interrupt
+  if(digitalRead(SWITCH_PIN) != HIGH){
+    //This is to prevent false positives for the door button press, which sometimes
+    //gets triggered incorrectly.
+    return;
+  }
   detachInterrupt(switch_interrupt); //Make sure the interrupt isn't triggered as long as the door is open.
   Serial.println("Button pressed");
   sc.mqtt.publish(door_open_announce_topic, "true");
